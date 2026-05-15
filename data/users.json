@@ -1,0 +1,34 @@
+{
+  "system": "Paws & Peace Core",
+  "version": "1.0.0",
+  "users": [
+    {
+      "id": "martin",
+      "name": "Martin",
+      "roles": ["caretaker", "coordinator"],
+      "xp": 0,
+      "active": true
+    },
+    {
+      "id": "selah",
+      "name": "Selah",
+      "roles": ["observer", "coordinator"],
+      "xp": 0,
+      "active": true
+    },
+    {
+      "id": "carole",
+      "name": "Carole",
+      "roles": ["caretaker"],
+      "xp": 0,
+      "active": true
+    },
+    {
+      "id": "volunteer_001",
+      "name": "Community Volunteer",
+      "roles": ["caretaker", "observer"],
+      "xp": 0,
+      "active": false
+    }
+  ]
+}
