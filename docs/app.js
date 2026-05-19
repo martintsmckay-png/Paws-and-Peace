@@ -1,38 +1,15 @@
 // ============================================
 // Paws & Peace Core - Enhanced App.js
-// Version: 1.0.0
+// Version: 2.0.0 - Full Sync Layer + Task History
 // ============================================
+
+import { syncManager } from "../core/sync/sync_manager.js";
+import { mockAPI } from "../core/sync/mock_api.js";
 
 let allTasks = [];
 let allUsers = [];
 let currentUserXP = {};
-let activeFilters = {
-  category: 'all',
-  role: 'all'
-};
-
-// ============================================
-// INITIALIZATION
-// ============================================
-
-async function init() {
-  console.log('🐾 Paws & Peace initializing...');
-  
-  allTasks = await loadTasks();
-  allUsers = await loadUsers();
-  
-  // Load XP from localStorage, merge with users.json defaults
-  currentUserXP = loadXPFromStorage();
-  
-  renderTasks(allTasks);
-  renderUsers(allUsers);
-  loadProtocolList();
-  
-  setupCategoryFilters(allTasks);
-  setupRoleFilters(allTasks);
-  
-  console.log('✅ Paws & Peace ready!');
-}
+let activeFilters = { category: 'all', role: 'all' };
 
 // ============================================
 // DATA LOADING
@@ -42,7 +19,7 @@ async function loadTasks() {
   try {
     const response = await fetch('../data/tasks.json');
     const data = await response.json();
-    console.log('📋 Tasks loaded:', data.tasks.length);
+    console.log('📋 Tasks loaded:', data.tasks?.length || 0);
     return data.tasks || [];
   } catch (error) {
     console.error('❌ Error loading tasks:', error);
@@ -54,21 +31,10 @@ async function loadUsers() {
   try {
     const response = await fetch('../data/users.json');
     const data = await response.json();
-    console.log('👥 Users loaded:', data.users.length);
+    console.log('👥 Users loaded:', data.users?.length || 0);
     return data.users || [];
   } catch (error) {
     console.error('❌ Error loading users:', error);
-    return [];
-  }
-}
-
-async function loadCategories() {
-  try {
-    const response = await fetch('../data/categories.json');
-    const data = await response.json();
-    return data.categories || [];
-  } catch (error) {
-    console.error('❌ Error loading categories:', error);
     return [];
   }
 }
@@ -79,16 +45,12 @@ async function loadCategories() {
 
 function loadXPFromStorage() {
   const stored = localStorage.getItem('pawsAndPeaceXP');
-  if (stored) {
-    return JSON.parse(stored);
-  }
+  if (stored) return JSON.parse(stored);
   
-  // Initialize from users.json
   const xpMap = {};
   allUsers.forEach(user => {
     xpMap[user.id] = user.xp || 0;
   });
-  
   saveXPToStorage(xpMap);
   return xpMap;
 }
@@ -98,12 +60,10 @@ function saveXPToStorage(xpMap) {
 }
 
 function addXP(userId, amount) {
-  if (!currentUserXP[userId]) {
-    currentUserXP[userId] = 0;
-  }
+  if (!currentUserXP[userId]) currentUserXP[userId] = 0;
   currentUserXP[userId] += amount;
   saveXPToStorage(currentUserXP);
-  console.log(`✨ +${amount} XP for ${userId} (Total: ${currentUserXP[userId]})`);
+  console.log(`✨ +${amount} XP for ${userId}`);
   renderUsers(allUsers);
 }
 
@@ -113,7 +73,10 @@ function addXP(userId, amount) {
 
 function renderTasks(tasks) {
   const taskList = document.getElementById('task-list');
-  if (!taskList) return;
+  if (!taskList) {
+    console.warn('⚠️ task-list container not found');
+    return;
+  }
   
   taskList.innerHTML = '';
   
@@ -126,6 +89,8 @@ function renderTasks(tasks) {
     const taskEl = createTaskElement(task);
     taskList.appendChild(taskEl);
   });
+  
+  attachNoteHandlers();
 }
 
 function createTaskElement(task) {
@@ -139,18 +104,18 @@ function createTaskElement(task) {
   
   div.innerHTML = `
     <div class="task-header">
-      <h3>${task.name}</h3>
+      <h3>${task.name || task.title || 'Task'}</h3>
       <span class="task-xp">+${xpReward} XP ${groupBonus}</span>
     </div>
     <p class="task-description">${task.description || 'No description'}</p>
     <div class="task-meta">
-      <span class="task-domain">${task.domain || 'general'}</span>
+      <span class="task-domain">${task.domain || task.category || 'general'}</span>
       <span class="task-roles">${rolesDisplay}</span>
     </div>
+    <textarea class="vet-note" placeholder="Add vet note..."></textarea>
     <div class="task-actions">
-      <button class="btn-complete" onclick="completeTask('${task.id}', ${xpReward})">
-        ✓ Complete
-      </button>
+      <button class="btn-complete" onclick="completeTask('${task.id}', ${xpReward})">✓ Complete</button>
+      <button class="btn-save-note" data-id="${task.id}">💾 Save Note</button>
       ${task.protocol ? `<button class="btn-protocol" onclick="loadProtocol('${task.protocol}')">📘 Protocol</button>` : ''}
     </div>
   `;
@@ -159,14 +124,12 @@ function createTaskElement(task) {
 }
 
 function completeTask(taskId, xp) {
-  // In a real system, this would assign to a user
-  // For now, we'll add XP to a default user or prompt for selection
-  const userId = prompt('Enter your user ID (e.g., martin, selah, carole):', 'martin');
+  const userId = prompt('Enter your user ID (martin, selah, carole):', 'martin');
   
   if (userId && allUsers.find(u => u.id === userId)) {
     addXP(userId, xp);
+    logTaskHistory(taskId, xp, userId);
     console.log(`✅ Task ${taskId} completed by ${userId}`);
-    // Could mark task as completed in localStorage here
   } else {
     alert('User not found!');
   }
@@ -182,7 +145,6 @@ function renderUsers(users) {
   
   userList.innerHTML = '';
   
-  // Sort by XP (descending)
   const sortedUsers = [...users].sort((a, b) => {
     const xpA = currentUserXP[a.id] || 0;
     const xpB = currentUserXP[b.id] || 0;
@@ -212,7 +174,7 @@ function renderUsers(users) {
 }
 
 // ============================================
-// CATEGORY FILTERS
+// CATEGORY & ROLE FILTERS
 // ============================================
 
 function setupCategoryFilters(tasks) {
@@ -220,116 +182,176 @@ function setupCategoryFilters(tasks) {
   
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      const category = btn.dataset.category;
-      activeFilters.category = category;
-      
-      // Update active button
+      activeFilters.category = btn.dataset.category;
       buttons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      
-      // Apply combined filters
       applyFilters(tasks);
     });
   });
   
-  // Set "All" as default active
-  if (buttons.length > 0) {
-    buttons[0].classList.add('active');
-  }
+  if (buttons.length > 0) buttons[0].classList.add('active');
 }
-
-// ============================================
-// ROLE FILTERS
-// ============================================
 
 function setupRoleFilters(tasks) {
   const buttons = document.querySelectorAll('.role-btn');
   
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      const role = btn.dataset.role;
-      activeFilters.role = role;
-      
-      // Update active button
+      activeFilters.role = btn.dataset.role;
       buttons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      
-      // Apply combined filters
       applyFilters(tasks);
     });
   });
   
-  // Set "All Roles" as default active
-  if (buttons.length > 0) {
-    buttons[0].classList.add('active');
-  }
+  if (buttons.length > 0) buttons[0].classList.add('active');
 }
-
-// ============================================
-// COMBINED FILTERING
-// ============================================
 
 function applyFilters(tasks) {
   let filtered = tasks;
   
-  // Filter by category
   if (activeFilters.category !== 'all') {
     filtered = filtered.filter(t => t.domain === activeFilters.category);
   }
   
-  // Filter by role
   if (activeFilters.role !== 'all') {
-    filtered = filtered.filter(t => {
-      return t.assignedtoroles && t.assignedtoroles.includes(activeFilters.role);
-    });
+    filtered = filtered.filter(t => t.assignedtoroles && t.assignedtoroles.includes(activeFilters.role));
   }
   
   renderTasks(filtered);
 }
 
 // ============================================
-// PROTOCOL MANAGEMENT
+// SYNC: VET NOTES
+// ============================================
+
+function syncVetNote(taskId, note) {
+  if (!note.trim()) return;
+  syncManager.addRecord({
+    type: 'vet_note',
+    taskId,
+    note
+  });
+}
+
+function attachNoteHandlers() {
+  document.querySelectorAll('.btn-save-note').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskCard = btn.closest('.task-card');
+      const textarea = taskCard.querySelector('.vet-note');
+      const taskId = btn.dataset.id;
+      const note = textarea.value;
+      
+      syncVetNote(taskId, note);
+      textarea.value = '';
+      alert('✅ Note saved to sync queue.');
+    });
+  });
+}
+
+function setupSyncButton() {
+  const btn = document.getElementById('sync-btn');
+  if (!btn) return;
+  
+  btn.addEventListener('click', async () => {
+    const result = await syncManager.syncAll(mockAPI);
+    alert(`✅ Synced: ${result.successCount} success, ${result.failCount} failed`);
+  });
+}
+
+// ============================================
+// TASK HISTORY
+// ============================================
+
+function logTaskHistory(taskId, xp, userId) {
+  const history = JSON.parse(localStorage.getItem('task_history')) || [];
+  
+  const task = allTasks.find(t => t.id == taskId);
+  history.push({
+    id: taskId,
+    title: task?.name || task?.title || 'Unknown Task',
+    xp,
+    completedBy: userId,
+    completedAt: new Date().toISOString()
+  });
+  
+  localStorage.setItem('task_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem('task_history')) || [];
+  const container = document.getElementById('history-list');
+  if (!container) return;
+  
+  container.innerHTML = history
+    .reverse()
+    .map(h => `
+      <div class="history-item">
+        <p><strong>${h.title}</strong> — ${h.xp} XP by ${h.completedBy}</p>
+        <small>${new Date(h.completedAt).toLocaleString()}</small>
+      </div>
+    `)
+    .join('');
+}
+
+// ============================================
+// PROTOCOL VIEWER
 // ============================================
 
 async function loadProtocolList() {
+  const list = document.getElementById('protocol-list');
+  if (!list) return;
+  
+  const protocols = [
+    'mobilevetservices.md',
+    'community_stewardship.md',
+    'emergencyanimalcare.md',
+    'wintershelterprep.md',
+    'volunteer_safety.md'
+  ];
+  
+  protocols.forEach(file => {
+    const li = document.createElement('li');
+    li.textContent = file.replace('.md', '').replace(/_/g, ' ');
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => loadProtocol(file));
+    list.appendChild(li);
+  });
+}
+
+async function loadProtocol(file) {
+  const viewer = document.getElementById('protocol-viewer');
+  if (!viewer) return;
+  
   try {
-    const response = await fetch('../docs/protocols/');
-    // Note: GitHub Pages may not list directories
-    // Fallback: hardcode protocol list or load from JSON
-    console.log('📚 Protocol list loaded');
+    const text = await fetch(`../docs/protocols/${file}`).then(r => r.text());
+    viewer.innerHTML = `<pre>${text}</pre>`;
   } catch (error) {
-    console.error('❌ Error loading protocol list:', error);
+    viewer.innerHTML = '<p>Protocol not found.</p>';
   }
 }
 
-function loadProtocol(protocolName) {
-  const path = `../docs/protocols/${protocolName}.md`;
-  window.open(path, '_blank');
-  console.log(`📖 Opening protocol: ${protocolName}`);
-}
-
 // ============================================
-// UTILITY FUNCTIONS
+// INITIALIZATION
 // ============================================
 
-function getUser(userId) {
-  return allUsers.find(u => u.id === userId);
+async function init() {
+  console.log('🐾 Paws & Peace initializing...');
+  
+  allTasks = await loadTasks();
+  allUsers = await loadUsers();
+  currentUserXP = loadXPFromStorage();
+  
+  renderTasks(allTasks);
+  renderUsers(allUsers);
+  renderHistory();
+  loadProtocolList();
+  
+  setupCategoryFilters(allTasks);
+  setupRoleFilters(allTasks);
+  setupSyncButton();
+  
+  console.log('✅ Paws & Peace ready!');
 }
-
-function getUsersByRole(role) {
-  return allUsers.filter(u => u.roles && u.roles.includes(role));
-}
-
-function getTasksByCategory(category) {
-  return allTasks.filter(t => t.domain === category);
-}
-
-function getTasksByRole(role) {
-  return allTasks.filter(t => t.assignedtoroles && t.assignedtoroles.includes(role));
-}
-
-// ============================================
-// START APP ON PAGE LOAD
-// ============================================
 
 document.addEventListener('DOMContentLoaded', init);
