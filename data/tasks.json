@@ -5,62 +5,62 @@
     {
       "id": 1,
       "name": "Refill community dog water stations",
-      "title": "Refill community dog water stations",
-      "description": "Check and refill water stations at key community locations.",
+      "description": "Ensure all outdoor water stations are filled with fresh water",
       "domain": "animal-care",
-      "category": "animal-care",
+      "assignedtoroles": ["caretaker"],
       "xp": 25,
-      "assignedtoroles": ["caretaker", "observer"],
-      "protocol": "mobilevetservices",
-      "status": "pending"
+      "groupbonus": 20,
+      "protocol": "mobilevetservices"
     },
     {
       "id": 2,
       "name": "Clear brush along winter road check-stop",
-      "title": "Clear brush along winter road check-stop",
-      "description": "Maintain visibility and access at winter shelter routes.",
+      "description": "Maintain visibility and safety on community roads",
       "domain": "infrastructure",
-      "category": "infrastructure",
-      "xp": 50,
       "assignedtoroles": ["builder", "coordinator"],
-      "protocol": "wintershelterprep",
-      "status": "pending"
+      "xp": 50,
+      "groupbonus": 15,
+      "protocol": "wintershelterprep"
     },
     {
       "id": 3,
       "name": "Run network diagnostic on local school server",
-      "title": "Run network diagnostic on local school server",
-      "description": "Ensure connectivity for community resource center.",
+      "description": "Test connectivity and performance of school infrastructure",
       "domain": "tech-support",
-      "category": "tech-support",
+      "assignedtoroles": ["builder", "observer"],
       "xp": 40,
-      "assignedtoroles": ["builder"],
-      "protocol": "community_stewardship",
-      "status": "pending"
+      "groupbonus": 10,
+      "protocol": null
     },
     {
       "id": 4,
       "name": "Distribute community wellness supply packs",
-      "title": "Distribute community wellness supply packs",
-      "description": "Hand out care packages to neighborhood volunteers.",
+      "description": "Deliver wellness kits to households",
       "domain": "wellness",
-      "category": "wellness",
-      "xp": 30,
       "assignedtoroles": ["caretaker", "coordinator"],
-      "protocol": "community_stewardship",
-      "status": "pending"
+      "xp": 30,
+      "groupbonus": 25,
+      "protocol": "community_stewardship"
     },
     {
       "id": 5,
-      "name": "Emergency animal care assessment",
-      "title": "Emergency animal care assessment",
-      "description": "Document and assess any animals needing urgent help.",
+      "name": "Monitor and log animal health observations",
+      "description": "Record health notes for animals under care",
       "domain": "animal-care",
-      "category": "animal-care",
-      "xp": 60,
-      "assignedtoroles": ["observer", "safety"],
-      "protocol": "emergencyanimalcare",
-      "status": "pending"
+      "assignedtoroles": ["observer", "caretaker"],
+      "xp": 20,
+      "groupbonus": 5,
+      "protocol": "emergencyanimalcare"
+    },
+    {
+      "id": 6,
+      "name": "Coordinate volunteer safety briefing",
+      "description": "Lead safety orientation for new volunteers",
+      "domain": "safety",
+      "assignedtoroles": ["coordinator", "safety"],
+      "xp": 35,
+      "groupbonus": 20,
+      "protocol": "volunteer_safety"
     }
   ]
 }
