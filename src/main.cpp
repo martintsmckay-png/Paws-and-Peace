@@ -1,6 +1,7 @@
 #include "visual/renderer.h"
 #include "state_machine.h"
 #include <iostream>
+#include "input/input.h"
 
 int main() {
     // --- Initialize Renderer ---
@@ -9,10 +10,10 @@ int main() {
     // --- Initialize State Machine ---
     StateMachine sm;
     sm.setState(AppState::Idle);
-
+	Input input;
     // --- Main Loop ---
     while (!renderer.shouldClose()) {
-
+	input.update();
         // --- Update Phase ---
         sm.update();
 
@@ -35,7 +36,9 @@ int main() {
         } else if (sm.getState() == AppState::Exiting) {
             DrawText("STATE: EXITING", 20, 20, 20, RED);
         }
-
+	} else if (sm.getState() == AppState::Exiting) {
+    DrawText("STATE: EXITING", 20, 20, 20, RED);
+}
         renderer.end();
     }
 
