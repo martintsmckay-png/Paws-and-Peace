@@ -1,46 +1,43 @@
+#include "visual/renderer.h"
+#include "state_machine.h"
 #include <iostream>
-#include <chrono>
-#include <thread>
-
-// Forward declarations for future modules
-void update();
-void render();
 
 int main() {
-    std::cout << "Paws & Peace — Core Runtime Initialized\n";
+    // --- Initialize Renderer ---
+    Renderer renderer(800, 600, "Paws & Peace Engine");
 
-    bool running = true;
+    // --- Initialize State Machine ---
+    StateMachine sm;
+    sm.setState(AppState::Idle);
 
-    // Basic deterministic loop (60 FPS target)
-    const int targetFPS = 60;
-    const auto frameDuration = std::chrono::milliseconds(1000 / targetFPS);
+    // --- Main Loop ---
+    while (!renderer.shouldClose()) {
 
-    while (running) {
-        auto frameStart = std::chrono::steady_clock::now();
+        // --- Update Phase ---
+        sm.update();
 
-        // --- Update world state ---
-        update();
-
-        // --- Render output (placeholder) ---
-        render();
-
-        // --- Frame timing control ---
-        auto frameEnd = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frameEnd - frameStart);
-
-        if (elapsed < frameDuration) {
-            std::this_thread::sleep_for(frameDuration - elapsed);
+        // Example: simple input-driven state transitions
+        if (IsKeyPressed(KEY_ENTER)) {
+            sm.setState(AppState::Running);
         }
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            sm.setState(AppState::Exiting);
+        }
+
+        // --- Render Phase ---
+        renderer.begin();
+
+        // Basic visual feedback for state
+        if (sm.getState() == AppState::Idle) {
+            DrawText("STATE: IDLE", 20, 20, 20, LIGHTGRAY);
+        } else if (sm.getState() == AppState::Running) {
+            DrawText("STATE: RUNNING", 20, 20, 20, GREEN);
+        } else if (sm.getState() == AppState::Exiting) {
+            DrawText("STATE: EXITING", 20, 20, 20, RED);
+        }
+
+        renderer.end();
     }
 
     return 0;
 }
-
-void update() {
-    // Placeholder for future state machine logic
-}
-
-void render() {
-    // Placeholder for Raylib or text-based rendering
-}0
-
